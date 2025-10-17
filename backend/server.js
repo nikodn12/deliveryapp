@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const path = require('path'); // TAMBAHKAN INI
 const db = require('./database');
 
 const app = express();
@@ -10,7 +11,12 @@ const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -364,31 +370,20 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({ 
-    success: true,
-    message: 'Delivery API Server',
-    version: '1.0.0',
-    endpoints: {
-      auth: {
-        login: 'POST /api/login'
-      },
-      user: {
-        profile: 'GET /api/profile',
-        users: 'GET /api/users',
-        userById: 'GET /api/users/:id',
-        updateUser: 'PUT /api/users/:id'
-      },
-      stats: {
-        statistics: 'GET /api/statistics'
-      },
-      health: 'GET /api/health'
-    }
-  });
+// ==================== SERVE REACT STATIC FILES ====================
+// TAMBAHKAN KODE INI DI BAWAH SEMUA ROUTE API
+
+// Serve static files dari React build
+app.use(express.static(path.join(__dirname, '../frontend/build')));
+
+// Handle React Router - semua route yang tidak match dengan API akan serve index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
 });
 
-// 404 handler
+// ==================== ERROR HANDLERS ====================
+
+// 404 handler untuk API (seharusnya tidak tercapai karena app.get('*') di atas)
 app.use((req, res) => {
   res.status(404).json({ 
     success: false,
@@ -405,12 +400,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
+// Dari:
 app.listen(PORT, () => {
-  console.log('='.repeat(50));
   console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
-  console.log(`📅 ${new Date().toLocaleString('id-ID')}`);
-  console.log('='.repeat(50));
+});
+
+// Jadi (tambahkan '0.0.0.0'):
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server berjalan di http://0.0.0.0:${PORT}`);
+  console.log(`🌍 Dapat diakses dari jaringan eksternal`);
 });
 
 // Graceful shutdown
